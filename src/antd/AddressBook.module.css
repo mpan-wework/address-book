@@ -23,13 +23,18 @@
 }
 
 button.delete,
-button.delete:hover {
+button.delete:hover,
+button.delete:focus {
   background-color: rgb(255, 195, 204);
   color: rgb(170, 0, 0);
 }
 
 button.update,
-button.add {
+button.update:hover,
+button.update:focus,
+button.add,
+button.add:hover,
+button.add:focus {
   background-color: rgb(255, 238, 144);
   color: rgb(164, 101, 0);
 }
