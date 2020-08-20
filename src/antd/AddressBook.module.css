@@ -2,6 +2,16 @@
   margin-bottom: 2rem;
 }
 
+.addRow td:nth-child(1) > *,
+.addRow td:nth-child(2) > * {
+  visibility: hidden;
+}
+
+input.edit {
+  max-width: 7rem;
+  padding: 0 0.5rem;
+}
+
 .buttons {
   margin-top: 2rem;
   display: flex;
@@ -29,7 +39,8 @@ button.delete:hover {
 }
 
 button.update,
-button.add {
+button.add,
+button.add:hover {
   background-color: rgb(255, 238, 144);
   color: rgb(164, 101, 0);
 }
