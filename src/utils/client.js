@@ -7,10 +7,7 @@ const dummyRequest = (data) => new Promise((resolve) => {
 const createClient = () => {
   const createRecord = async (row) => {
     console.info('createRecord:', row)
-    return dummyRequest({
-      ...row,
-      id: Math.floor(Date.now() / 1000) % 100000,
-    });
+    return dummyRequest({ ...row, id: Date.now() });
   };
 
   const updateRecord = async (id, row) => {
