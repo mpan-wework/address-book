@@ -4,47 +4,30 @@ import { t } from '../utils/i18n';
 import client from '../utils/client';
 import styles from './AddressBook.module.css';
 
-const initialDataSource = [
-  {
-    id: 501,
-    name: 'Khall Zhang',
-    location: 'Shanghai',
-    office: 'C-103',
-    phoneOffice: 'x55778',
-    phoneCell: '650-353-1239',
-  },
-  {
-    id: 502,
-    name: 'Khall Zhang',
-    location: 'Shanghai',
-    office: 'C-103',
-    phoneOffice: 'x55778',
-    phoneCell: '650-353-1239',
-  },
-];
-
 const initialRow = {
   name: '',
   location: '',
   office: '',
   phoneOffice: '',
   phoneCell: '',
-  editable: true,
 };
 
 const AddressBook = () => {
-  const [existing, setExisting] = useState(() => initialDataSource);
+  const [existing, setExisting] = useState([]);
   const [added, setAdded] = useState([]);
 
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
 
-  const rowSelection = useMemo(
-    () => ({
-      selectedRowKeys,
-      onChange: setSelectedRowKeys,
-    }),
-    [selectedRowKeys, setSelectedRowKeys],
-  );
+  useEffect(() => {
+    (async () => {
+      setExisting(await client.fetchRecords());
+    })();
+  }, [setExisting]);
+
+  const rowSelection = useMemo(() => ({
+    selectedRowKeys,
+    onChange: setSelectedRowKeys,
+  }), [selectedRowKeys, setSelectedRowKeys]);
 
   useEffect(() => {
     setSelectedRowKeys(
@@ -56,13 +39,15 @@ const AddressBook = () => {
     );
   }, [existing, added, setSelectedRowKeys]);
 
-  const deleteRows = useCallback(
-    async () => {
-      await client.deleteRecords(selectedRowKeys);
-      setExisting((prev) => prev.filter((record) => !selectedRowKeys.includes(record.id)));
-    },
-    [selectedRowKeys, setExisting],
-  );
+  const deleteRows = useCallback(async () => {
+    await client.deleteRecords(selectedRowKeys);
+    setExisting(
+      (prev) => prev.filter((record) => !selectedRowKeys.includes(record.id)),
+    );
+    setAdded(
+      (prev) => prev.filter((record) => !selectedRowKeys.includes(record.key)),
+    );
+  }, [selectedRowKeys, setExisting, setAdded]);
 
   const deletableSelected = useMemo(
     () => selectedRowKeys
@@ -71,15 +56,12 @@ const AddressBook = () => {
     [selectedRowKeys, existing],
   );
 
-  const addRow = useCallback(
-    () => {
-      setAdded((prev) => prev.concat({
-        ...initialRow,
-        key: Date.now(),
-      }));
-    },
-    [setAdded],
-  );
+  const addRow = useCallback(() => {
+    setAdded((prev) => prev.concat({
+      ...initialRow,
+      key: Date.now(),
+    }));
+  }, [setAdded]);
 
   const dataSourceWithKeys = useMemo(
     () => existing.map((row) => ({ ...row, key: row.id })).concat(added),
@@ -104,7 +86,7 @@ const AddressBook = () => {
           ...prev[pos],
           [key]: value,
         })
-        .concat(prev.slice(pos+1))
+        .concat(prev.slice(pos + 1))
     };
     setExisting(cb);
     setAdded(cb)
@@ -117,6 +99,72 @@ const AddressBook = () => {
       <div>{value}</div>
     ),
     [editCell]
+  );
+
+  const onCellClick = useCallback((record) => () => {
+    if (record.id && !record.editable) {
+      const cb = (prev) => {
+        const pos = prev.findIndex((row) => record.id === row.id);
+
+        if (pos === -1) {
+          return prev;
+        }
+
+        return prev.slice(0, pos)
+          .concat({
+            ...prev[pos],
+            editable: true,
+          })
+          .concat(prev.slice(pos + 1))
+      };
+      setExisting(cb);
+    }
+  }, [setExisting]);
+
+  const phoneCell = useCallback(
+    (value, record) => {
+      if (!record.id || record.editable) {
+        return <Input value={value} onChange={editCell(record, 'phoneCell')} />
+      } else {
+        return <div onClick={onCellClick(record)}>{value}</div>
+      }
+    },
+    [editCell, onCellClick],
+  );
+
+  const updateRows = useCallback(
+    async () => {
+      const records = selectedRowKeys.map((key) => {
+        const exisitingRow = existing.find((row) => row.id === key);
+        if (exisitingRow) {
+          return exisitingRow;
+        }
+        const addedRow = added.find((row) => row.key === key);
+        if (addedRow) {
+          return addedRow;
+        }
+
+        return null;
+      }).filter(Boolean);
+
+      const updated = await client.updateRecords(records);
+
+      setExisting((prev) => {
+        for (let i = 0, l = updated.length; i < l; i += 1) {
+          const pos = prev.findIndex((row) => row.id === updated[i].id);
+          if (pos === -1) {
+            prev = prev.concat(updated[i]);
+          } else {
+            prev = prev.slice(0, pos).concat(updated[i]).concat(prev.slice(pos + 1));
+          }
+        };
+
+        return prev;
+      });
+      setAdded((prev) => prev.filter((row) => !selectedRowKeys.includes(row.key)));
+      setSelectedRowKeys((prev) => prev.filter((key) => !selectedRowKeys.includes(key)));
+    },
+    [selectedRowKeys, existing, added, setExisting, setAdded, setSelectedRowKeys],
   );
 
   return (
@@ -164,7 +212,7 @@ const AddressBook = () => {
             key={'phoneCell'}
             title={t('Cell')}
             dataIndex={'phoneCell'}
-            render={editableCell('phoneCell')}
+            render={phoneCell}
           />
         </Table.ColumnGroup>
       </Table>
@@ -182,6 +230,7 @@ const AddressBook = () => {
           <Button
             className={styles.update}
             disabled={selectedRowKeys.length === 0}
+            onClick={updateRows}
           >
             {t('Update')}
           </Button>
