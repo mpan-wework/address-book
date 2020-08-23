@@ -1,3 +1,22 @@
+const initialDataSource = [
+  {
+    id: 501,
+    name: 'Khall Zhang',
+    location: 'Shanghai',
+    office: 'C-103',
+    phoneOffice: 'x55778',
+    phoneCell: '650-353-1239',
+  },
+  {
+    id: 502,
+    name: 'Khall Zhang',
+    location: 'Shanghai',
+    office: 'C-103',
+    phoneOffice: 'x55778',
+    phoneCell: '650-353-1239',
+  },
+];
+
 const dummyRequest = (data) => new Promise((resolve) => {
   setTimeout(() => {
     resolve(data);
@@ -5,14 +24,24 @@ const dummyRequest = (data) => new Promise((resolve) => {
 })
 
 const createClient = () => {
-  const createRecord = async (row) => {
-    console.info('createRecord:', row)
-    return dummyRequest({ ...row, id: Date.now() });
+  const fetchRecords = async () => {
+    return dummyRequest(initialDataSource);
   };
 
-  const updateRecord = async (id, row) => {
-    console.info('updateRecord:', id, row);
-    return dummyRequest(row);
+  const updateRecords = async (rows) => {
+    console.info('updateRecords:', rows);
+
+    return dummyRequest(rows.map((row) => {
+      if (row.id) {
+        return { ...row, editable: false };
+      } else {
+        return {
+          ...row,
+          key: null,
+          id: Math.floor(Date.now() / 1000) % 100000,
+        }
+      }
+    }));
   };
 
   const deleteRecords = async (ids) => {
@@ -21,8 +50,8 @@ const createClient = () => {
   };
 
   return {
-    createRecord,
-    updateRecord,
+    fetchRecords,
+    updateRecords,
     deleteRecords,
   };
 };
